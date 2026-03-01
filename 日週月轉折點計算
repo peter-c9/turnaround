@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>專業 K 線與未來轉折預測</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <style>
+        body {
+            font-family: "Microsoft JhengHei", sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .upload-section {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px dashed #555;
+            border-radius: 8px;
+            background-color: #1e1e1e;
+        }
+        input[type="file"] {
+            color: #e0e0e0;
+            font-size: 16px;
+        }
+        #control-panel {
+            display: none; 
+            text-align: center;
+            margin-bottom: 15px;
+            background-color: #1e1e1e;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        #latest-date-display {
+            font-size: 22px;
+            font-weight: bold;
+            color: #f1c40f; 
+            margin-bottom: 15px;
+            letter-spacing: 1px;
+        }
+        .btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 0 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        .btn:hover { background-color: #2980b9; }
+        .btn-secondary { background-color: #8e44ad; }
+        .btn-secondary:hover { background-color: #732d91; }
+        #chart-container {
+            width: 100%;
+            height: 650px;
+            background-color: #1a1a1a;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="upload-section">
+            <label for="csvFileInput" style="font-size: 18px; font-weight: bold; margin-right: 10px;">📂 載入 CSV 歷史資料：</label>
+            <input type="file" id="csvFileInput" accept=".csv">
+        </div>
+        
+        <div id="control-panel">
+            <div id="latest-date-display">最新實體 K 棒日期：等待載入...</div>
+            <button id="btn-show-all" class="btn btn-secondary">🔍 顯示全部資料</button>
+            <button id="btn-show-latest" class="btn">🎯 顯示近 10 根 + 預測</button>
+        </div>
+
+        <div id="chart-container"></div>
+    </div>
+
+    <script>
+        let myChart = echarts.init(document.getElementById('chart-container'), 'dark');
+        let currentTotalPoints = 0;
+
+        document.getElementById('csvFileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) { processData(e.target.result); };
+            reader.readAsText(file);
+        });
+
+        function processData(csvText) {
+            const lines = csvText.split('\n');
+            const rawData = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                const cols = line.split(',');
+                if (cols.length >= 5) {
+                    rawData.push({
+                        date: cols[0],
+                        open: parseFloat(cols[1]),
+                        high: parseFloat(cols[2]),
+                        low: parseFloat(cols[3]),
+                        close: parseFloat(cols[4])
+                    });
+                }
+            }
+
+            if (rawData.length === 0) return alert("資料解析失敗！");
+
+            const N = rawData.length;
+            const categoryData = [];
+            const kLineData = [];
+            const turnaroundPrices = [];
+            const markLineData = [];
+
+            // 完整日期顯示在上方控制面板
+            document.getElementById('latest-date-display').innerText = `最新實體 K 棒日期：${rawData[N-1].date}`;
+            document.getElementById('control-panel').style.display = 'block';
+
+            for (let i = 0; i < N; i++) {
+                let currentData = rawData[i];
+                categoryData.push(currentData.date);
+                kLineData.push([currentData.open, currentData.close, currentData.low, currentData.high]);
+
+                let currentYear = currentData.date.substring(0, 4);
+
+                // 跨年分隔線與上方年份標示
+                if (i > 0) {
+                    let prevYear = rawData[i-1].date.substring(0, 4);
+                    if (currentYear !== prevYear) {
+                        markLineData.push({ 
+                            xAxis: i, 
+                            label: { 
+                                show: true, 
+                                formatter: currentYear, 
+                                color: '#f39c12',
+                                fontWeight: 'bold',
+                                position: 'end'
+                            },
+                            lineStyle: { color: '#666', type: 'dashed', width: 2 } 
+                        });
+                    }
+                }
+
+                if (i >= 6) {
+                    let A = rawData[i - 3].close;
+                    let B = rawData[i - 6].close;
+                    turnaroundPrices.push((A * 2) - B);
+                } else {
+                    turnaroundPrices.push(null);
+                }
+            }
+
+            if (N >= 6) {
+                categoryData.push("Future_1");
+                kLineData.push([]); 
+                let A_plus1 = rawData[N - 2].close;
+                let B_plus1 = rawData[N - 5].close;
+                turnaroundPrices.push((A_plus1 * 2) - B_plus1);
+            }
+
+            if (N >= 5) {
+                categoryData.push("Future_2");
+                kLineData.push([]); 
+                let A_plus2 = rawData[N - 1].close;
+                let B_plus2 = rawData[N - 4].close;
+                turnaroundPrices.push((A_plus2 * 2) - B_plus2);
+            }
+
+            currentTotalPoints = categoryData.length;
+            drawChart(categoryData, kLineData, turnaroundPrices, markLineData);
+            showLatestData();
+        }
+
+        function drawChart(categoryData, kLineData, turnaroundPrices, markLineData) {
+            const option = {
+                backgroundColor: '#1a1a1a', 
+                // 已移除 graphic 浮水印區塊
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'cross',
+                        crossStyle: { color: '#f1c40f', width: 1.5 }, 
+                        label: { backgroundColor: '#333' }
+                    }
+                },
+                legend: {
+                    data: ['K線', '轉折價位 (預測)'],
+                    textStyle: { color: '#ccc' }
+                },
+                grid: { left: '5%', right: '5%', bottom: '10%' },
+                xAxis: {
+                    type: 'category',
+                    data: categoryData,
+                    scale: true,
+                    axisLine: { lineStyle: { color: '#555' } },
+                    axisLabel: {
+                        color: '#aaa',
+                        // 隱藏年份，只顯示 月-日
+                        formatter: function (value) {
+                            if (value.startsWith('Future_')) {
+                                let num = value.split('_')[1];
+                                return '未來 +' + num;
+                            }
+                            // 切割字串 YYYY-MM-DD
+                            let parts = value.split('-');
+                            if (parts.length === 3) {
+                                return parts[1] + '-' + parts[2]; // 回傳 MM-DD
+                            } else if (parts.length === 2) {
+                                return parts[1]; // 如果是月線 YYYY-MM，只回傳 MM
+                            }
+                            return value;
+                        }
+                    }
+                },
+                yAxis: {
+                    scale: true,
+                    splitLine: { show: true, lineStyle: { color: '#2a2a2a' } },
+                    axisLine: { lineStyle: { color: '#555' } },
+                    axisLabel: { color: '#aaa' }
+                },
+                dataZoom: [
+                    { type: 'inside', start: 0, end: 100 }, 
+                    { show: true, type: 'slider', bottom: '2%', height: 20, borderColor: '#333' }
+                ],
+                series: [
+                    {
+                        name: 'K線',
+                        type: 'candlestick',
+                        data: kLineData,
+                        itemStyle: {
+                            color: '#ef232a',       
+                            color0: '#14b143',      
+                            borderColor: '#ef232a',
+                            borderColor0: '#14b143'
+                        },
+                        markLine: {
+                            symbol: ['none', 'none'],
+                            data: markLineData 
+                        }
+                    },
+                    {
+                        name: '轉折價位 (預測)',
+                        type: 'line',
+                        data: turnaroundPrices,
+                        smooth: true,
+                        showSymbol: true,
+                        symbolSize: 6,
+                        lineStyle: { color: '#3498db', width: 2, type: 'dashed' }, 
+                        itemStyle: { color: '#3498db' }
+                    }
+                ]
+            };
+            myChart.setOption(option, true);
+        }
+
+        document.getElementById('btn-show-all').addEventListener('click', function() {
+            myChart.dispatchAction({ type: 'dataZoom', start: 0, end: 100 });
+        });
+
+        document.getElementById('btn-show-latest').addEventListener('click', showLatestData);
+
+        function showLatestData() {
+            if (currentTotalPoints === 0) return;
+            let startIdx = Math.max(0, currentTotalPoints - 12);
+            myChart.dispatchAction({
+                type: 'dataZoom',
+                startValue: startIdx,
+                endValue: currentTotalPoints - 1
+            });
+        }
+
+        window.addEventListener('resize', function() { myChart.resize(); });
+    </script>
+</body>
+</html>
