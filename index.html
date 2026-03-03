@@ -28,7 +28,6 @@
         .upload-box label { display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px; }
         input[type="file"] { color: #e0e0e0; font-size: 14px; width: 100%; cursor: pointer; }
 
-        /* 控制面板與設定面板 */
         .panel {
             background-color: #1e1e1e; padding: 15px; border-radius: 8px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.5); margin-bottom: 20px;
@@ -47,20 +46,22 @@
             background-color: #2a2a2a; padding: 10px 15px; border-radius: 5px;
         }
         .setting-group input[type="number"] {
-            width: 100px; padding: 5px; border-radius: 4px; border: 1px solid #555;
+            width: 120px; padding: 5px; border-radius: 4px; border: 1px solid #555;
             background-color: #121212; color: #00ffff; font-weight: bold; font-size: 16px; text-align: center;
         }
         .setting-group input[type="range"] { width: 100px; cursor: pointer; }
-        .val-display { color: #f1c40f; font-weight: bold; width: 20px; display: inline-block; }
+        .val-display { color: #f1c40f; font-weight: bold; width: 20px; display: inline-block; text-align: center; }
 
         .btn {
             background-color: #3498db; color: white; border: none;
-            padding: 10px 25px; border-radius: 5px; cursor: pointer;
+            padding: 10px 20px; border-radius: 5px; cursor: pointer;
             font-size: 16px; font-weight: bold; transition: background-color 0.3s;
         }
         .btn:hover { background-color: #2980b9; }
         .btn-secondary { background-color: #8e44ad; }
         .btn-secondary:hover { background-color: #732d91; }
+        .btn-warning { background-color: #e67e22; }
+        .btn-warning:hover { background-color: #d35400; }
 
         .chart-wrapper {
             display: none; margin-bottom: 30px; background-color: #1a1a1a;
@@ -90,29 +91,30 @@
         
         <div id="control-panel" class="panel">
             <span style="font-size: 18px; font-weight: bold;">全局視角控制：</span>
-            <button id="btn-show-all" class="btn btn-secondary">🔍 全圖表：顯示全部資料</button>
-            <button id="btn-show-latest" class="btn">🎯 全圖表：顯示近 10 根 + 預測</button>
+            <button id="btn-show-all" class="btn btn-secondary">🔍 顯示全部</button>
+            <button id="btn-show-latest" class="btn">🎯 顯示近 10 根 + 預測</button>
+            <button id="btn-show-5" class="btn btn-warning">🔥 顯示最後 5 根 (含預測)</button>
         </div>
 
         <div id="settings-panel" class="panel">
             <div class="setting-group" style="border: 1px solid #00ffff;">
-                <label for="currentPriceInput" style="color: #00ffff; font-weight: bold;">🎯 目前價位 (水平線):</label>
-                <input type="number" id="currentPriceInput" placeholder="輸入數值...">
+                <label for="currentPriceInput" style="color: #00ffff; font-weight: bold;">🎯 目前價位:</label>
+                <input type="number" id="currentPriceInput" placeholder="輸入現價...">
             </div>
             <div class="setting-group">
                 <label style="color: #3498db;">轉折線粗細:</label>
-                <input type="range" id="thickTurnaround" min="1" max="5" value="2">
-                <span id="valTurnaround" class="val-display">2</span>
+                <input type="range" id="thickTurnaround" min="1" max="5" value="5">
+                <span id="valTurnaround" class="val-display">5</span>
             </div>
             <div class="setting-group">
                 <label style="color: #f1c40f;">樞紐點(P)粗細:</label>
-                <input type="range" id="thickPivot" min="1" max="5" value="3">
-                <span id="valPivot" class="val-display">3</span>
+                <input type="range" id="thickPivot" min="1" max="5" value="5">
+                <span id="valPivot" class="val-display">5</span>
             </div>
             <div class="setting-group">
                 <label style="color: #ff9999;">壓撐線粗細:</label>
-                <input type="range" id="thickSR" min="1" max="5" value="2">
-                <span id="valSR" class="val-display">2</span>
+                <input type="range" id="thickSR" min="1" max="5" value="3">
+                <span id="valSR" class="val-display">3</span>
             </div>
         </div>
 
@@ -122,13 +124,7 @@
     </div>
 
     <script>
-        // 全局畫圖參數設定 (由滑桿與輸入框綁定)
-        const config = {
-            currentPrice: null,
-            thickTurnaround: 2,
-            thickPivot: 3,
-            thickSR: 2
-        };
+        const config = { currentPrice: null, thickTurnaround: 5, thickPivot: 5, thickSR: 3 };
 
         const chartsData = {
             'daily':   { instance: echarts.init(document.getElementById('chart-daily'), 'dark'), data: null, title: '【日線】轉折與樞紐系統', color: '#3498db' },
@@ -136,7 +132,6 @@
             'monthly': { instance: echarts.init(document.getElementById('chart-monthly'), 'dark'), data: null, title: '【月線】轉折與樞紐系統', color: '#e74c3c' }
         };
 
-        // --- 綁定設定面板的事件 ---
         document.getElementById('currentPriceInput').addEventListener('input', (e) => {
             config.currentPrice = e.target.value ? parseFloat(e.target.value) : null;
             redrawAllCharts();
@@ -146,7 +141,7 @@
             document.getElementById(id).addEventListener('input', (e) => {
                 config[configKey] = parseInt(e.target.value);
                 document.getElementById(valId).innerText = e.target.value;
-                redrawAllCharts(); // 拖動滑桿時即時重繪
+                redrawAllCharts(); 
             });
         };
         bindSlider('thickTurnaround', 'thickTurnaround', 'valTurnaround');
@@ -154,12 +149,9 @@
         bindSlider('thickSR', 'thickSR', 'valSR');
 
         function redrawAllCharts() {
-            Object.keys(chartsData).forEach(key => {
-                if (chartsData[key].data) drawChart(key);
-            });
+            Object.keys(chartsData).forEach(key => { if (chartsData[key].data) drawChart(key); });
         }
 
-        // --- 檔案上傳處理 ---
         document.getElementById('csvDaily').addEventListener('change', (e) => handleFileUpload(e, 'daily'));
         document.getElementById('csvWeekly').addEventListener('change', (e) => handleFileUpload(e, 'weekly'));
         document.getElementById('csvMonthly').addEventListener('change', (e) => handleFileUpload(e, 'monthly'));
@@ -182,11 +174,8 @@
                 const cols = line.split(',');
                 if (cols.length >= 5) {
                     rawData.push({
-                        date: cols[0],
-                        open: parseFloat(cols[1]),
-                        high: parseFloat(cols[2]),
-                        low: parseFloat(cols[3]),
-                        close: parseFloat(cols[4])
+                        date: cols[0], open: parseFloat(cols[1]), high: parseFloat(cols[2]),
+                        low: parseFloat(cols[3]), close: parseFloat(cols[4])
                     });
                 }
             }
@@ -194,61 +183,19 @@
             if (rawData.length === 0) return alert("資料解析失敗！請確認 CSV 格式。");
 
             const N = rawData.length;
+            const isDaily = (chartKey === 'daily');
             const categoryData = [];
             const kLineData = [];
             const turnaroundPrices = [];
             const markLineData = [];
             const pivotData = { P: [], R1: [], R2: [], R3: [], R4: [], R5: [], S1: [], S2: [], S3: [], S4: [], S5: [] };
-            const latestDate = rawData[N-1].date;
-
-            for (let i = 0; i < N; i++) {
-                let currentData = rawData[i];
-                categoryData.push(currentData.date);
-                kLineData.push([currentData.open, currentData.close, currentData.low, currentData.high]);
-
-                let currentYear = currentData.date.substring(0, 4);
-                if (i > 0) {
-                    let prevYear = rawData[i-1].date.substring(0, 4);
-                    if (currentYear !== prevYear) {
-                        markLineData.push({ 
-                            xAxis: i, 
-                            label: { show: true, formatter: currentYear, color: '#f39c12', fontWeight: 'bold', position: 'end' },
-                            lineStyle: { color: '#666', type: 'dashed', width: 2 } 
-                        });
-                    }
-                }
-
-                if (i >= 6) {
-                    let A = rawData[i - 3].close;
-                    let B = rawData[i - 6].close;
-                    turnaroundPrices.push((A * 2) - B);
-                } else {
-                    turnaroundPrices.push(null);
-                }
-
-                if (i > 0) {
-                    let prev = rawData[i - 1];
-                    let H = prev.high, L = prev.low, C = prev.close;
-                    let P = (H + L + C) / 3;
-                    let range = H - L;
-                    pivotData.P.push(P);
-                    pivotData.R1.push(2 * P - L); pivotData.S1.push(2 * P - H);
-                    pivotData.R2.push(P + range); pivotData.S2.push(P - range);
-                    pivotData.R3.push(P + 2 * range); pivotData.S3.push(P - 2 * range);
-                    pivotData.R4.push(P + 3 * range); pivotData.S4.push(P - 3 * range);
-                    pivotData.R5.push(P + 4 * range); pivotData.S5.push(P - 4 * range);
-                } else {
+            
+            const pushPivot = (prevK) => {
+                if (!prevK) {
                     Object.keys(pivotData).forEach(key => pivotData[key].push(null));
+                    return;
                 }
-            }
-
-            if (N >= 6) {
-                categoryData.push("Future_1");
-                kLineData.push([]); 
-                turnaroundPrices.push((rawData[N - 2].close * 2) - rawData[N - 5].close);
-                
-                let prev = rawData[N - 1];
-                let H = prev.high, L = prev.low, C = prev.close;
+                let H = prevK.high, L = prevK.low, C = prevK.close;
                 let P = (H + L + C) / 3;
                 let range = H - L;
                 pivotData.P.push(P);
@@ -257,57 +204,91 @@
                 pivotData.R3.push(P + 2 * range); pivotData.S3.push(P - 2 * range);
                 pivotData.R4.push(P + 3 * range); pivotData.S4.push(P - 3 * range);
                 pivotData.R5.push(P + 4 * range); pivotData.S5.push(P - 4 * range);
+            };
+
+            const latestHistoryDate = rawData[N-1].date;
+
+            // --- 1. 處理所有歷史 K 棒 ---
+            for (let i = 0; i < N; i++) {
+                categoryData.push(rawData[i].date); // 無論日週月，這裡只放真實日期，不放 NOW 字串，避免斷層
+                kLineData.push([rawData[i].open, rawData[i].close, rawData[i].low, rawData[i].high]);
+
+                let currentYear = rawData[i].date.substring(0, 4);
+                if (i > 0) {
+                    let prevYear = rawData[i-1].date.substring(0, 4);
+                    if (currentYear !== prevYear) {
+                        markLineData.push({ 
+                            xAxis: i, label: { show: true, formatter: currentYear, color: '#f39c12', fontWeight: 'bold', position: 'end' },
+                            lineStyle: { color: '#666', type: 'dashed', width: 2 } 
+                        });
+                    }
+                }
+
+                if (i >= 6) turnaroundPrices.push((rawData[i-3].close * 2) - rawData[i-6].close);
+                else turnaroundPrices.push(null);
+
+                pushPivot(i > 0 ? rawData[i - 1] : null);
             }
 
-            if (N >= 5) {
-                categoryData.push("Future_2");
+            // --- 2. 處理時間軸末端的預測點位 ---
+            if (isDaily) {
+                // 日線專屬邏輯：最後一根 K 棒就是 NOW，所以「不需要」補空位，直接補上 Future_1
+                categoryData.push('Future_1');
                 kLineData.push([]); 
-                turnaroundPrices.push((rawData[N - 1].close * 2) - rawData[N - 4].close);
-                Object.keys(pivotData).forEach(key => pivotData[key].push(null));
+                turnaroundPrices.push(N >= 6 ? (rawData[N - 3].close * 2) - rawData[N - 6].close : null);
+                pushPivot(rawData[N - 1]); // Future_1 的樞紐依賴 NOW (也就是最後一根實體K棒)
+            } else {
+                // 週線/月線專屬邏輯：最後一根 K 棒是歷史，必須補上一個空的 NOW，再補 Future_1
+                categoryData.push('NOW');
+                kLineData.push([]);
+                turnaroundPrices.push(N >= 6 ? (rawData[N - 3].close * 2) - rawData[N - 6].close : null);
+                pushPivot(rawData[N - 1]); // NOW 的樞紐依賴最後一根實體K棒
+
+                categoryData.push('Future_1');
+                kLineData.push([]);
+                turnaroundPrices.push(N >= 5 ? (rawData[N - 2].close * 2) - rawData[N - 5].close : null);
+                pushPivot(null); // Future_1 尚無資料可算樞紐
             }
 
-            // 將算好的資料存起來，之後調粗細就不用重新計算
             chartsData[chartKey].data = {
-                categoryData, kLineData, turnaroundPrices, pivotData, markLineData, latestDate
+                categoryData, kLineData, turnaroundPrices, pivotData, markLineData, latestHistoryDate, isDaily
             };
 
             document.getElementById(`wrapper-${chartKey}`).style.display = 'block';
             chartsData[chartKey].instance.resize();
             drawChart(chartKey);
-            zoomToLatest(chartKey);
+            zoomTo5(chartKey); // 預設直接切到最後 5 根最精華的視角
         }
 
         function drawChart(chartKey) {
             const chartInfo = chartsData[chartKey];
-            const { categoryData, kLineData, turnaroundPrices, pivotData, markLineData, latestDate } = chartInfo.data;
+            const { categoryData, kLineData, turnaroundPrices, pivotData, markLineData, latestHistoryDate, isDaily } = chartInfo.data;
             
-            // 複製一份 markLineData 來加入目前的價位線，避免重複添加
             let currentMarkLineData = [...markLineData];
             
-            // 如果使用者有輸入目前價位，畫上水藍色的水平線
             if (config.currentPrice !== null) {
                 currentMarkLineData.push({
                     yAxis: config.currentPrice,
                     lineStyle: { color: '#00ffff', width: 2, type: 'solid' },
                     label: { 
                         show: true, 
-                        formatter: '目前價位: {c}', 
+                        formatter: function(p) { return '現價: ' + Math.round(p.value); }, 
                         position: 'insideEndTop', 
-                        color: '#121212',
+                        color: '#000000',
                         backgroundColor: '#00ffff',
-                        padding: [3, 5],
-                        borderRadius: 3,
-                        fontWeight: 'bold'
+                        padding: [8, 12],
+                        borderRadius: 5,
+                        fontWeight: 'bold',
+                        fontSize: 26 
                     }
                 });
             }
 
             const legendData = ['K線', '轉折價位', '樞紐點(P)', 'R1', 'R2', 'R3', 'R4', 'R5', 'S1', 'S2', 'S3', 'S4', 'S5'];
 
-            // 利用 UI 設定的粗細來繪製線條
             const createPivotSeries = (name, data, color, type = 'dotted', width) => ({
                 name: name, type: 'line', data: data, smooth: true, showSymbol: false,
-                lineStyle: { color: color, width: width, type: type, opacity: 0.7 },
+                lineStyle: { color: color, width: width, type: type, opacity: 0.8 },
                 itemStyle: { color: color }
             });
 
@@ -317,20 +298,22 @@
                     itemStyle: { color: '#ef232a', color0: '#14b143', borderColor: '#ef232a', borderColor0: '#14b143' },
                     markLine: { symbol: ['none', 'none'], data: currentMarkLineData, animation: false }
                 },
+                // 隱形同步序列，專門用來產生右側 Y 軸游標標籤
+                {
+                    name: 'syncRightAxis', type: 'candlestick', data: kLineData,
+                    yAxisIndex: 1, itemStyle: { opacity: 0 }, tooltip: { show: false }, silent: true
+                },
                 {
                     name: '轉折價位', type: 'line', data: turnaroundPrices, smooth: true, showSymbol: true, symbolSize: 6,
                     lineStyle: { color: '#3498db', width: config.thickTurnaround, type: 'dashed' },
                     itemStyle: { color: '#3498db' }
                 },
-                // 樞紐點中心 P (改為醒目黃色，套用樞紐粗細設定)
                 createPivotSeries('樞紐點(P)', pivotData.P, '#f1c40f', 'solid', config.thickPivot),
-                // 壓力線 (套用壓撐粗細設定)
                 createPivotSeries('R1', pivotData.R1, '#ff9999', 'dotted', config.thickSR),
                 createPivotSeries('R2', pivotData.R2, '#ff6666', 'dotted', config.thickSR),
                 createPivotSeries('R3', pivotData.R3, '#ff3333', 'dotted', config.thickSR),
                 createPivotSeries('R4', pivotData.R4, '#cc0000', 'dotted', config.thickSR),
                 createPivotSeries('R5', pivotData.R5, '#990000', 'dotted', config.thickSR),
-                // 支撐線 (套用壓撐粗細設定)
                 createPivotSeries('S1', pivotData.S1, '#99ff99', 'dotted', config.thickSR),
                 createPivotSeries('S2', pivotData.S2, '#66ff66', 'dotted', config.thickSR),
                 createPivotSeries('S3', pivotData.S3, '#33ff33', 'dotted', config.thickSR),
@@ -338,23 +321,40 @@
                 createPivotSeries('S5', pivotData.S5, '#009900', 'dotted', config.thickSR)
             ];
 
+            // 格式化 X 軸文字
+            const formatXAxis = function(value) {
+                if (value === 'NOW') return 'NOW';
+                if (value === 'Future_1') return '未來 +1';
+                let parts = value.split('-');
+                let formattedDate = (parts.length === 3) ? parts[1] + '-' + parts[2] : (parts.length === 2 ? parts[1] : value);
+                
+                // 解決日線無縫對齊關鍵：把最後一根實體 K 棒直接加上 (NOW) 標示
+                if (isDaily && value === latestHistoryDate) {
+                    return formattedDate + '\n(NOW)';
+                }
+                return formattedDate;
+            };
+
             const option = {
                 backgroundColor: 'transparent', 
                 title: {
-                    text: `${chartInfo.title}  (最新實體 K 棒日期：${latestDate})`,
+                    text: `${chartInfo.title}  (最後實體K棒：${latestHistoryDate})`, 
                     left: 'center', top: 0, textStyle: { color: chartInfo.color, fontSize: 18, fontWeight: 'bold' }
                 },
                 tooltip: {
                     trigger: 'axis',
                     axisPointer: { type: 'cross', crossStyle: { color: '#f1c40f', width: 1.5 }, label: { backgroundColor: '#333' } },
                     formatter: function (params) {
-                        let res = `<strong>${params[0].axisValue}</strong><br/>`;
+                        // 在提示框中，把換行符號拿掉，讓日期與 (NOW) 顯示在同一行
+                        let displayDate = formatXAxis(params[0].axisValue).replace('\n', ' ');
+                        let res = `<strong>${displayDate}</strong><br/>`;
                         params.forEach(p => {
+                            if (p.seriesName === 'syncRightAxis') return; 
                             if (p.value !== null && p.value !== undefined && !isNaN(p.value) && p.seriesName !== 'K線') {
-                                res += `${p.marker} ${p.seriesName}: <b>${Number(p.value).toFixed(2)}</b><br/>`;
-                            } else if (p.seriesName === 'K線' && p.value.length >= 5) {
-                                res += `${p.marker} 開: ${p.value[1]} | 收: ${p.value[2]}<br/>`;
-                                res += `${p.marker} 低: ${p.value[3]} | 高: ${p.value[4]}<br/>`;
+                                res += `${p.marker} ${p.seriesName}: <b style="font-size: 14px;">${Math.round(p.value)}</b><br/>`;
+                            } else if (p.seriesName === 'K線' && p.value && p.value.length >= 5) {
+                                res += `${p.marker} 開: <b>${Math.round(p.value[1])}</b> | 收: <b>${Math.round(p.value[2])}</b><br/>`;
+                                res += `${p.marker} 低: <b>${Math.round(p.value[3])}</b> | 高: <b>${Math.round(p.value[4])}</b><br/>`;
                             }
                         });
                         return res;
@@ -367,24 +367,40 @@
                 grid: { left: '5%', right: '5%', bottom: '10%', top: 75 },
                 xAxis: {
                     type: 'category', data: categoryData, scale: true, axisLine: { lineStyle: { color: '#555' } },
-                    axisLabel: {
-                        color: '#aaa',
-                        formatter: function (value) {
-                            if (value.startsWith('Future_')) return '未來 +' + value.split('_')[1];
-                            let parts = value.split('-');
-                            if (parts.length === 3) return parts[1] + '-' + parts[2];
-                            if (parts.length === 2) return parts[1];
-                            return value;
+                    axisLabel: { color: '#aaa', formatter: formatXAxis },
+                    // 下方時間軸游標數字
+                    axisPointer: { label: { formatter: function(params) { return formatXAxis(params.value).replace('\n', ' '); } } }
+                },
+                yAxis: [
+                    { 
+                        type: 'value', scale: true, position: 'left',
+                        splitLine: { show: true, lineStyle: { color: '#2a2a2a' } }, 
+                        axisLine: { lineStyle: { color: '#555' } }, 
+                        // 左側 Y 軸去小數點
+                        axisLabel: { color: '#aaa', formatter: function(value) { return Math.round(value); } },
+                        axisPointer: { label: { formatter: function(params) { return Math.round(params.value); } } }
+                    },
+                    { 
+                        type: 'value', scale: true, position: 'right',
+                        splitLine: { show: false }, axisLine: { show: false }, axisLabel: { show: false },
+                        // 右側游標數字標籤去小數點，放大到 22px
+                        axisPointer: { 
+                            label: { 
+                                show: true, 
+                                formatter: function(params) { return Math.round(params.value); },
+                                backgroundColor: '#e67e22', color: '#ffffff', fontWeight: 'bold', padding: [6, 12],
+                                fontSize: 22 
+                            } 
                         }
                     }
-                },
-                yAxis: { scale: true, splitLine: { show: true, lineStyle: { color: '#2a2a2a' } }, axisLine: { lineStyle: { color: '#555' } }, axisLabel: { color: '#aaa' } },
+                ],
                 dataZoom: [{ type: 'inside', start: 0, end: 100 }, { show: true, type: 'slider', bottom: '2%', height: 20, borderColor: '#333' }],
                 series: seriesData
             };
             chartInfo.instance.setOption(option, true);
         }
 
+        // --- 三個縮放按鈕的綁定 ---
         document.getElementById('btn-show-all').addEventListener('click', function() {
             Object.values(chartsData).forEach(chartInfo => {
                 if (chartInfo.data) chartInfo.instance.dispatchAction({ type: 'dataZoom', start: 0, end: 100 });
@@ -395,14 +411,24 @@
             Object.keys(chartsData).forEach(key => zoomToLatest(key));
         });
 
+        document.getElementById('btn-show-5').addEventListener('click', function() {
+            Object.keys(chartsData).forEach(key => zoomTo5(key));
+        });
+
         function zoomToLatest(chartKey) {
             const chartInfo = chartsData[chartKey];
             if (!chartInfo.data) return;
             const totalPoints = chartInfo.data.categoryData.length;
             let startIdx = Math.max(0, totalPoints - 12);
-            chartInfo.instance.dispatchAction({
-                type: 'dataZoom', startValue: startIdx, endValue: totalPoints - 1
-            });
+            chartInfo.instance.dispatchAction({ type: 'dataZoom', startValue: startIdx, endValue: totalPoints - 1 });
+        }
+
+        function zoomTo5(chartKey) {
+            const chartInfo = chartsData[chartKey];
+            if (!chartInfo.data) return;
+            const totalPoints = chartInfo.data.categoryData.length;
+            let startIdx = Math.max(0, totalPoints - 5);
+            chartInfo.instance.dispatchAction({ type: 'dataZoom', startValue: startIdx, endValue: totalPoints - 1 });
         }
 
         window.addEventListener('resize', function() { 
