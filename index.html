@@ -3,12 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>專業 K 線與未來轉折預測 - 多週期儀表板</title>
+    <title>專業 K 線、轉折預測與樞紐點(Pivot)系統</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <style>
-        /* 加入 box-sizing 確保內外邊距計算正確 */
         * { box-sizing: border-box; }
-        
         body {
             font-family: "Microsoft JhengHei", sans-serif;
             background-color: #121212;
@@ -16,91 +14,65 @@
             padding: 20px;
             margin: 0;
         }
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
+        .container { max-width: 1400px; margin: 0 auto; }
         
-        /* 上傳區塊改為彈性排列，螢幕太小會自動換行 */
         .upload-container {
-            display: flex;
-            flex-wrap: wrap; /* 允許換行 */
-            justify-content: space-between;
-            gap: 15px;
-            margin-bottom: 20px;
+            display: flex; flex-wrap: wrap; justify-content: space-between;
+            gap: 15px; margin-bottom: 20px;
         }
         .upload-box {
-            flex: 1;
-            min-width: 280px; /* 確保不會縮得太小 */
-            text-align: center;
-            padding: 15px;
-            border: 1px dashed #555;
-            border-radius: 8px;
-            background-color: #1e1e1e;
+            flex: 1; min-width: 280px; text-align: center;
+            padding: 15px; border: 1px dashed #555;
+            border-radius: 8px; background-color: #1e1e1e;
         }
-        .upload-box label {
-            display: block;
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        input[type="file"] {
-            color: #e0e0e0;
-            font-size: 14px;
-            width: 100%;
-            cursor: pointer;
-        }
+        .upload-box label { display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px; }
+        input[type="file"] { color: #e0e0e0; font-size: 14px; width: 100%; cursor: pointer; }
 
-        /* 全局控制面板 */
-        #control-panel {
-            text-align: center;
-            margin-bottom: 20px;
-            background-color: #1e1e1e;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            border-left: 5px solid #f1c40f;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
+        /* 控制面板與設定面板 */
+        .panel {
+            background-color: #1e1e1e; padding: 15px; border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); margin-bottom: 20px;
         }
+        #control-panel {
+            text-align: center; border-left: 5px solid #f1c40f; display: flex;
+            flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px;
+        }
+        #settings-panel {
+            border-left: 5px solid #00ffff; display: flex; flex-wrap: wrap;
+            align-items: center; justify-content: space-around; gap: 15px;
+        }
+        
+        .setting-group {
+            display: flex; align-items: center; gap: 10px; font-size: 15px;
+            background-color: #2a2a2a; padding: 10px 15px; border-radius: 5px;
+        }
+        .setting-group input[type="number"] {
+            width: 100px; padding: 5px; border-radius: 4px; border: 1px solid #555;
+            background-color: #121212; color: #00ffff; font-weight: bold; font-size: 16px; text-align: center;
+        }
+        .setting-group input[type="range"] { width: 100px; cursor: pointer; }
+        .val-display { color: #f1c40f; font-weight: bold; width: 20px; display: inline-block; }
+
         .btn {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 10px 25px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-            transition: background-color 0.3s;
+            background-color: #3498db; color: white; border: none;
+            padding: 10px 25px; border-radius: 5px; cursor: pointer;
+            font-size: 16px; font-weight: bold; transition: background-color 0.3s;
         }
         .btn:hover { background-color: #2980b9; }
         .btn-secondary { background-color: #8e44ad; }
         .btn-secondary:hover { background-color: #732d91; }
 
-        /* 圖表容器設定 */
         .chart-wrapper {
-            display: none; /* 載入資料前先隱藏 */
-            margin-bottom: 30px;
-            background-color: #1a1a1a;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            padding: 15px 0;
-            width: 100%; /* 確保撐滿容器 */
+            display: none; margin-bottom: 30px; background-color: #1a1a1a;
+            border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            padding: 15px 0; width: 100%;
         }
-        .chart-container {
-            width: 100%;
-            height: 450px; 
-        }
+        .chart-container { width: 100%; height: 550px; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        
         <div class="upload-container">
             <div class="upload-box">
                 <label for="csvDaily" style="color: #3498db;">🌞 載入【日線】CSV</label>
@@ -116,31 +88,78 @@
             </div>
         </div>
         
-        <div id="control-panel">
+        <div id="control-panel" class="panel">
             <span style="font-size: 18px; font-weight: bold;">全局視角控制：</span>
             <button id="btn-show-all" class="btn btn-secondary">🔍 全圖表：顯示全部資料</button>
             <button id="btn-show-latest" class="btn">🎯 全圖表：顯示近 10 根 + 預測</button>
         </div>
 
-        <div id="wrapper-daily" class="chart-wrapper">
-            <div id="chart-daily" class="chart-container"></div>
-        </div>
-        <div id="wrapper-weekly" class="chart-wrapper">
-            <div id="chart-weekly" class="chart-container"></div>
-        </div>
-        <div id="wrapper-monthly" class="chart-wrapper">
-            <div id="chart-monthly" class="chart-container"></div>
+        <div id="settings-panel" class="panel">
+            <div class="setting-group" style="border: 1px solid #00ffff;">
+                <label for="currentPriceInput" style="color: #00ffff; font-weight: bold;">🎯 目前價位 (水平線):</label>
+                <input type="number" id="currentPriceInput" placeholder="輸入數值...">
+            </div>
+            <div class="setting-group">
+                <label style="color: #3498db;">轉折線粗細:</label>
+                <input type="range" id="thickTurnaround" min="1" max="5" value="2">
+                <span id="valTurnaround" class="val-display">2</span>
+            </div>
+            <div class="setting-group">
+                <label style="color: #f1c40f;">樞紐點(P)粗細:</label>
+                <input type="range" id="thickPivot" min="1" max="5" value="3">
+                <span id="valPivot" class="val-display">3</span>
+            </div>
+            <div class="setting-group">
+                <label style="color: #ff9999;">壓撐線粗細:</label>
+                <input type="range" id="thickSR" min="1" max="5" value="2">
+                <span id="valSR" class="val-display">2</span>
+            </div>
         </div>
 
+        <div id="wrapper-daily" class="chart-wrapper"><div id="chart-daily" class="chart-container"></div></div>
+        <div id="wrapper-weekly" class="chart-wrapper"><div id="chart-weekly" class="chart-container"></div></div>
+        <div id="wrapper-monthly" class="chart-wrapper"><div id="chart-monthly" class="chart-container"></div></div>
     </div>
 
     <script>
-        const chartsData = {
-            'daily':   { instance: echarts.init(document.getElementById('chart-daily'), 'dark'), totalPoints: 0, title: '【日線】轉折預測', color: '#3498db' },
-            'weekly':  { instance: echarts.init(document.getElementById('chart-weekly'), 'dark'), totalPoints: 0, title: '【週線】轉折預測', color: '#2ecc71' },
-            'monthly': { instance: echarts.init(document.getElementById('chart-monthly'), 'dark'), totalPoints: 0, title: '【月線】轉折預測', color: '#e74c3c' }
+        // 全局畫圖參數設定 (由滑桿與輸入框綁定)
+        const config = {
+            currentPrice: null,
+            thickTurnaround: 2,
+            thickPivot: 3,
+            thickSR: 2
         };
 
+        const chartsData = {
+            'daily':   { instance: echarts.init(document.getElementById('chart-daily'), 'dark'), data: null, title: '【日線】轉折與樞紐系統', color: '#3498db' },
+            'weekly':  { instance: echarts.init(document.getElementById('chart-weekly'), 'dark'), data: null, title: '【週線】轉折與樞紐系統', color: '#2ecc71' },
+            'monthly': { instance: echarts.init(document.getElementById('chart-monthly'), 'dark'), data: null, title: '【月線】轉折與樞紐系統', color: '#e74c3c' }
+        };
+
+        // --- 綁定設定面板的事件 ---
+        document.getElementById('currentPriceInput').addEventListener('input', (e) => {
+            config.currentPrice = e.target.value ? parseFloat(e.target.value) : null;
+            redrawAllCharts();
+        });
+        
+        const bindSlider = (id, configKey, valId) => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                config[configKey] = parseInt(e.target.value);
+                document.getElementById(valId).innerText = e.target.value;
+                redrawAllCharts(); // 拖動滑桿時即時重繪
+            });
+        };
+        bindSlider('thickTurnaround', 'thickTurnaround', 'valTurnaround');
+        bindSlider('thickPivot', 'thickPivot', 'valPivot');
+        bindSlider('thickSR', 'thickSR', 'valSR');
+
+        function redrawAllCharts() {
+            Object.keys(chartsData).forEach(key => {
+                if (chartsData[key].data) drawChart(key);
+            });
+        }
+
+        // --- 檔案上傳處理 ---
         document.getElementById('csvDaily').addEventListener('change', (e) => handleFileUpload(e, 'daily'));
         document.getElementById('csvWeekly').addEventListener('change', (e) => handleFileUpload(e, 'weekly'));
         document.getElementById('csvMonthly').addEventListener('change', (e) => handleFileUpload(e, 'monthly'));
@@ -149,9 +168,7 @@
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = function(e) { 
-                processData(e.target.result, chartKey); 
-            };
+            reader.onload = function(e) { processData(e.target.result, chartKey); };
             reader.readAsText(file);
         }
 
@@ -181,7 +198,7 @@
             const kLineData = [];
             const turnaroundPrices = [];
             const markLineData = [];
-
+            const pivotData = { P: [], R1: [], R2: [], R3: [], R4: [], R5: [], S1: [], S2: [], S3: [], S4: [], S5: [] };
             const latestDate = rawData[N-1].date;
 
             for (let i = 0; i < N; i++) {
@@ -190,7 +207,6 @@
                 kLineData.push([currentData.open, currentData.close, currentData.low, currentData.high]);
 
                 let currentYear = currentData.date.substring(0, 4);
-
                 if (i > 0) {
                     let prevYear = rawData[i-1].date.substring(0, 4);
                     if (currentYear !== prevYear) {
@@ -209,69 +225,152 @@
                 } else {
                     turnaroundPrices.push(null);
                 }
+
+                if (i > 0) {
+                    let prev = rawData[i - 1];
+                    let H = prev.high, L = prev.low, C = prev.close;
+                    let P = (H + L + C) / 3;
+                    let range = H - L;
+                    pivotData.P.push(P);
+                    pivotData.R1.push(2 * P - L); pivotData.S1.push(2 * P - H);
+                    pivotData.R2.push(P + range); pivotData.S2.push(P - range);
+                    pivotData.R3.push(P + 2 * range); pivotData.S3.push(P - 2 * range);
+                    pivotData.R4.push(P + 3 * range); pivotData.S4.push(P - 3 * range);
+                    pivotData.R5.push(P + 4 * range); pivotData.S5.push(P - 4 * range);
+                } else {
+                    Object.keys(pivotData).forEach(key => pivotData[key].push(null));
+                }
             }
 
             if (N >= 6) {
                 categoryData.push("Future_1");
                 kLineData.push([]); 
                 turnaroundPrices.push((rawData[N - 2].close * 2) - rawData[N - 5].close);
+                
+                let prev = rawData[N - 1];
+                let H = prev.high, L = prev.low, C = prev.close;
+                let P = (H + L + C) / 3;
+                let range = H - L;
+                pivotData.P.push(P);
+                pivotData.R1.push(2 * P - L); pivotData.S1.push(2 * P - H);
+                pivotData.R2.push(P + range); pivotData.S2.push(P - range);
+                pivotData.R3.push(P + 2 * range); pivotData.S3.push(P - 2 * range);
+                pivotData.R4.push(P + 3 * range); pivotData.S4.push(P - 3 * range);
+                pivotData.R5.push(P + 4 * range); pivotData.S5.push(P - 4 * range);
             }
 
             if (N >= 5) {
                 categoryData.push("Future_2");
                 kLineData.push([]); 
                 turnaroundPrices.push((rawData[N - 1].close * 2) - rawData[N - 4].close);
+                Object.keys(pivotData).forEach(key => pivotData[key].push(null));
             }
 
-            chartsData[chartKey].totalPoints = categoryData.length;
-            
-            // --- 關鍵修復區塊 ---
-            // 1. 先把圖表容器顯示出來
-            document.getElementById(`wrapper-${chartKey}`).style.display = 'block';
-            // 2. 強制 ECharts 重新抓取正確的寬度高度 (解決縮在一起的問題)
-            chartsData[chartKey].instance.resize();
-            // ---------------------
+            // 將算好的資料存起來，之後調粗細就不用重新計算
+            chartsData[chartKey].data = {
+                categoryData, kLineData, turnaroundPrices, pivotData, markLineData, latestDate
+            };
 
-            drawChart(chartKey, categoryData, kLineData, turnaroundPrices, markLineData, latestDate);
+            document.getElementById(`wrapper-${chartKey}`).style.display = 'block';
+            chartsData[chartKey].instance.resize();
+            drawChart(chartKey);
             zoomToLatest(chartKey);
         }
 
-        function drawChart(chartKey, categoryData, kLineData, turnaroundPrices, markLineData, latestDate) {
+        function drawChart(chartKey) {
             const chartInfo = chartsData[chartKey];
+            const { categoryData, kLineData, turnaroundPrices, pivotData, markLineData, latestDate } = chartInfo.data;
             
+            // 複製一份 markLineData 來加入目前的價位線，避免重複添加
+            let currentMarkLineData = [...markLineData];
+            
+            // 如果使用者有輸入目前價位，畫上水藍色的水平線
+            if (config.currentPrice !== null) {
+                currentMarkLineData.push({
+                    yAxis: config.currentPrice,
+                    lineStyle: { color: '#00ffff', width: 2, type: 'solid' },
+                    label: { 
+                        show: true, 
+                        formatter: '目前價位: {c}', 
+                        position: 'insideEndTop', 
+                        color: '#121212',
+                        backgroundColor: '#00ffff',
+                        padding: [3, 5],
+                        borderRadius: 3,
+                        fontWeight: 'bold'
+                    }
+                });
+            }
+
+            const legendData = ['K線', '轉折價位', '樞紐點(P)', 'R1', 'R2', 'R3', 'R4', 'R5', 'S1', 'S2', 'S3', 'S4', 'S5'];
+
+            // 利用 UI 設定的粗細來繪製線條
+            const createPivotSeries = (name, data, color, type = 'dotted', width) => ({
+                name: name, type: 'line', data: data, smooth: true, showSymbol: false,
+                lineStyle: { color: color, width: width, type: type, opacity: 0.7 },
+                itemStyle: { color: color }
+            });
+
+            const seriesData = [
+                {
+                    name: 'K線', type: 'candlestick', data: kLineData,
+                    itemStyle: { color: '#ef232a', color0: '#14b143', borderColor: '#ef232a', borderColor0: '#14b143' },
+                    markLine: { symbol: ['none', 'none'], data: currentMarkLineData, animation: false }
+                },
+                {
+                    name: '轉折價位', type: 'line', data: turnaroundPrices, smooth: true, showSymbol: true, symbolSize: 6,
+                    lineStyle: { color: '#3498db', width: config.thickTurnaround, type: 'dashed' },
+                    itemStyle: { color: '#3498db' }
+                },
+                // 樞紐點中心 P (改為醒目黃色，套用樞紐粗細設定)
+                createPivotSeries('樞紐點(P)', pivotData.P, '#f1c40f', 'solid', config.thickPivot),
+                // 壓力線 (套用壓撐粗細設定)
+                createPivotSeries('R1', pivotData.R1, '#ff9999', 'dotted', config.thickSR),
+                createPivotSeries('R2', pivotData.R2, '#ff6666', 'dotted', config.thickSR),
+                createPivotSeries('R3', pivotData.R3, '#ff3333', 'dotted', config.thickSR),
+                createPivotSeries('R4', pivotData.R4, '#cc0000', 'dotted', config.thickSR),
+                createPivotSeries('R5', pivotData.R5, '#990000', 'dotted', config.thickSR),
+                // 支撐線 (套用壓撐粗細設定)
+                createPivotSeries('S1', pivotData.S1, '#99ff99', 'dotted', config.thickSR),
+                createPivotSeries('S2', pivotData.S2, '#66ff66', 'dotted', config.thickSR),
+                createPivotSeries('S3', pivotData.S3, '#33ff33', 'dotted', config.thickSR),
+                createPivotSeries('S4', pivotData.S4, '#00cc00', 'dotted', config.thickSR),
+                createPivotSeries('S5', pivotData.S5, '#009900', 'dotted', config.thickSR)
+            ];
+
             const option = {
                 backgroundColor: 'transparent', 
                 title: {
                     text: `${chartInfo.title}  (最新實體 K 棒日期：${latestDate})`,
-                    left: 'center',
-                    top: 0,
-                    textStyle: { color: chartInfo.color, fontSize: 18, fontWeight: 'bold' }
+                    left: 'center', top: 0, textStyle: { color: chartInfo.color, fontSize: 18, fontWeight: 'bold' }
                 },
                 tooltip: {
                     trigger: 'axis',
-                    axisPointer: {
-                        type: 'cross',
-                        crossStyle: { color: '#f1c40f', width: 1.5 }, 
-                        label: { backgroundColor: '#333' }
+                    axisPointer: { type: 'cross', crossStyle: { color: '#f1c40f', width: 1.5 }, label: { backgroundColor: '#333' } },
+                    formatter: function (params) {
+                        let res = `<strong>${params[0].axisValue}</strong><br/>`;
+                        params.forEach(p => {
+                            if (p.value !== null && p.value !== undefined && !isNaN(p.value) && p.seriesName !== 'K線') {
+                                res += `${p.marker} ${p.seriesName}: <b>${Number(p.value).toFixed(2)}</b><br/>`;
+                            } else if (p.seriesName === 'K線' && p.value.length >= 5) {
+                                res += `${p.marker} 開: ${p.value[1]} | 收: ${p.value[2]}<br/>`;
+                                res += `${p.marker} 低: ${p.value[3]} | 高: ${p.value[4]}<br/>`;
+                            }
+                        });
+                        return res;
                     }
                 },
                 legend: {
-                    data: ['K線', '轉折價位 (預測)'],
-                    top: 30,
-                    textStyle: { color: '#ccc' }
+                    type: 'scroll', data: legendData, top: 35, textStyle: { color: '#ccc' },
+                    selected: { 'R4': false, 'R5': false, 'S4': false, 'S5': false }
                 },
-                grid: { left: '5%', right: '5%', bottom: '10%', top: 70 },
+                grid: { left: '5%', right: '5%', bottom: '10%', top: 75 },
                 xAxis: {
-                    type: 'category',
-                    data: categoryData,
-                    scale: true,
-                    axisLine: { lineStyle: { color: '#555' } },
+                    type: 'category', data: categoryData, scale: true, axisLine: { lineStyle: { color: '#555' } },
                     axisLabel: {
                         color: '#aaa',
                         formatter: function (value) {
-                            if (value.startsWith('Future_')) {
-                                return '未來 +' + value.split('_')[1];
-                            }
+                            if (value.startsWith('Future_')) return '未來 +' + value.split('_')[1];
                             let parts = value.split('-');
                             if (parts.length === 3) return parts[1] + '-' + parts[2];
                             if (parts.length === 2) return parts[1];
@@ -279,47 +378,16 @@
                         }
                     }
                 },
-                yAxis: {
-                    scale: true,
-                    splitLine: { show: true, lineStyle: { color: '#2a2a2a' } },
-                    axisLine: { lineStyle: { color: '#555' } },
-                    axisLabel: { color: '#aaa' }
-                },
-                dataZoom: [
-                    { type: 'inside', start: 0, end: 100 }, 
-                    { show: true, type: 'slider', bottom: '2%', height: 20, borderColor: '#333' }
-                ],
-                series: [
-                    {
-                        name: 'K線',
-                        type: 'candlestick',
-                        data: kLineData,
-                        itemStyle: {
-                            color: '#ef232a', color0: '#14b143',      
-                            borderColor: '#ef232a', borderColor0: '#14b143'
-                        },
-                        markLine: { symbol: ['none', 'none'], data: markLineData }
-                    },
-                    {
-                        name: '轉折價位 (預測)',
-                        type: 'line',
-                        data: turnaroundPrices,
-                        smooth: true,
-                        showSymbol: true,
-                        symbolSize: 6,
-                        lineStyle: { color: '#3498db', width: 2, type: 'dashed' }, 
-                        itemStyle: { color: '#3498db' }
-                    }
-                ]
+                yAxis: { scale: true, splitLine: { show: true, lineStyle: { color: '#2a2a2a' } }, axisLine: { lineStyle: { color: '#555' } }, axisLabel: { color: '#aaa' } },
+                dataZoom: [{ type: 'inside', start: 0, end: 100 }, { show: true, type: 'slider', bottom: '2%', height: 20, borderColor: '#333' }],
+                series: seriesData
             };
             chartInfo.instance.setOption(option, true);
         }
 
         document.getElementById('btn-show-all').addEventListener('click', function() {
             Object.values(chartsData).forEach(chartInfo => {
-                if (chartInfo.totalPoints > 0) {
-                    chartInfo.instance.dispatchAction({ type: 'dataZoom', start: 0, end: 100 });
-                }
+                if (chartInfo.data) chartInfo.instance.dispatchAction({ type: 'dataZoom', start: 0, end: 100 });
             });
         });
 
@@ -329,17 +397,16 @@
 
         function zoomToLatest(chartKey) {
             const chartInfo = chartsData[chartKey];
-            if (chartInfo.totalPoints === 0) return;
-            let startIdx = Math.max(0, chartInfo.totalPoints - 12);
+            if (!chartInfo.data) return;
+            const totalPoints = chartInfo.data.categoryData.length;
+            let startIdx = Math.max(0, totalPoints - 12);
             chartInfo.instance.dispatchAction({
-                type: 'dataZoom',
-                startValue: startIdx,
-                endValue: chartInfo.totalPoints - 1
+                type: 'dataZoom', startValue: startIdx, endValue: totalPoints - 1
             });
         }
 
         window.addEventListener('resize', function() { 
-            Object.values(chartsData).forEach(chartInfo => chartInfo.instance.resize());
+            Object.values(chartsData).forEach(chartInfo => { if (chartInfo.data) chartInfo.instance.resize(); });
         });
     </script>
 </body>
