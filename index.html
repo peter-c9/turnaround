@@ -132,9 +132,52 @@
             'monthly': { instance: echarts.init(document.getElementById('chart-monthly'), 'dark'), data: null, title: '【月線】轉折與樞紐系統', color: '#e74c3c' }
         };
 
+        // 利用 ECharts 原生的 title 陣列與富文本 (rich text) 功能來繪製標籤
+        function updateChartTitles() {
+            Object.keys(chartsData).forEach(key => {
+                if (chartsData[key].data) {
+                    const chartInfo = chartsData[key];
+                    const latestHistoryDate = chartInfo.data.latestHistoryDate;
+                    
+                    // 如果有輸入價格，使用 {priceBox|...} 語法呼叫下方定義的 rich 樣式
+                    const priceText = config.currentPrice !== null 
+                        ? `{priceBox|現價: ${Math.round(config.currentPrice)}}` 
+                        : '';
+
+                    chartInfo.instance.setOption({
+                        title: [
+                            {
+                                text: `${chartInfo.title} (最後實體K棒：${latestHistoryDate})`,
+                                left: 'center', top: 0, 
+                                textStyle: { color: chartInfo.color, fontSize: 18, fontWeight: 'bold' }
+                            }, 
+                            {
+                                text: priceText,
+                                right: 20, top: 0,
+                                textStyle: {
+                                    rich: {
+                                        // 這裡就是富文本的樣式，直接在 Canvas 內部渲染，絕對不會被深色模式蓋掉！
+                                        priceBox: {
+                                            color: '#000000',           // 黑字
+                                            backgroundColor: '#00ffff', // 水藍底
+                                            fontSize: 16,
+                                            fontWeight: 'bold',
+                                            padding: [4, 8],            // 內縮距
+                                            borderRadius: 4             // 圓角
+                                        }
+                                    }
+                                }
+                            }
+                        ]
+                    });
+                }
+            });
+        }
+
         document.getElementById('currentPriceInput').addEventListener('input', (e) => {
             config.currentPrice = e.target.value ? parseFloat(e.target.value) : null;
-            redrawAllCharts();
+            updateChartTitles(); 
+            redrawAllCharts();   
         });
         
         const bindSlider = (id, configKey, valId) => {
@@ -208,9 +251,8 @@
 
             const latestHistoryDate = rawData[N-1].date;
 
-            // --- 1. 處理所有歷史 K 棒 ---
             for (let i = 0; i < N; i++) {
-                categoryData.push(rawData[i].date); // 無論日週月，這裡只放真實日期，不放 NOW 字串，避免斷層
+                categoryData.push(rawData[i].date); 
                 kLineData.push([rawData[i].open, rawData[i].close, rawData[i].low, rawData[i].high]);
 
                 let currentYear = rawData[i].date.substring(0, 4);
@@ -230,25 +272,15 @@
                 pushPivot(i > 0 ? rawData[i - 1] : null);
             }
 
-            // --- 2. 處理時間軸末端的預測點位 ---
-            if (isDaily) {
-                // 日線專屬邏輯：最後一根 K 棒就是 NOW，所以「不需要」補空位，直接補上 Future_1
-                categoryData.push('Future_1');
-                kLineData.push([]); 
-                turnaroundPrices.push(N >= 6 ? (rawData[N - 3].close * 2) - rawData[N - 6].close : null);
-                pushPivot(rawData[N - 1]); // Future_1 的樞紐依賴 NOW (也就是最後一根實體K棒)
-            } else {
-                // 週線/月線專屬邏輯：最後一根 K 棒是歷史，必須補上一個空的 NOW，再補 Future_1
-                categoryData.push('NOW');
-                kLineData.push([]);
-                turnaroundPrices.push(N >= 6 ? (rawData[N - 3].close * 2) - rawData[N - 6].close : null);
-                pushPivot(rawData[N - 1]); // NOW 的樞紐依賴最後一根實體K棒
+            categoryData.push('NOW');
+            kLineData.push([]);
+            turnaroundPrices.push(N >= 6 ? (rawData[N - 3].close * 2) - rawData[N - 6].close : null);
+            pushPivot(rawData[N - 1]); 
 
-                categoryData.push('Future_1');
-                kLineData.push([]);
-                turnaroundPrices.push(N >= 5 ? (rawData[N - 2].close * 2) - rawData[N - 5].close : null);
-                pushPivot(null); // Future_1 尚無資料可算樞紐
-            }
+            categoryData.push('Future_1');
+            kLineData.push([]);
+            turnaroundPrices.push(N >= 5 ? (rawData[N - 2].close * 2) - rawData[N - 5].close : null);
+            pushPivot(null); 
 
             chartsData[chartKey].data = {
                 categoryData, kLineData, turnaroundPrices, pivotData, markLineData, latestHistoryDate, isDaily
@@ -257,7 +289,8 @@
             document.getElementById(`wrapper-${chartKey}`).style.display = 'block';
             chartsData[chartKey].instance.resize();
             drawChart(chartKey);
-            zoomTo5(chartKey); // 預設直接切到最後 5 根最精華的視角
+            updateChartTitles(); // 加載後更新標題
+            zoomTo5(chartKey); 
         }
 
         function drawChart(chartKey) {
@@ -270,17 +303,7 @@
                 currentMarkLineData.push({
                     yAxis: config.currentPrice,
                     lineStyle: { color: '#00ffff', width: 2, type: 'solid' },
-                    label: { 
-                        show: true, 
-                        formatter: function(p) { return '現價: ' + Math.round(p.value); }, 
-                        position: 'insideEndTop', 
-                        color: '#000000',
-                        backgroundColor: '#00ffff',
-                        padding: [8, 12],
-                        borderRadius: 5,
-                        fontWeight: 'bold',
-                        fontSize: 26 
-                    }
+                    label: { show: false }
                 });
             }
 
@@ -298,7 +321,6 @@
                     itemStyle: { color: '#ef232a', color0: '#14b143', borderColor: '#ef232a', borderColor0: '#14b143' },
                     markLine: { symbol: ['none', 'none'], data: currentMarkLineData, animation: false }
                 },
-                // 隱形同步序列，專門用來產生右側 Y 軸游標標籤
                 {
                     name: 'syncRightAxis', type: 'candlestick', data: kLineData,
                     yAxisIndex: 1, itemStyle: { opacity: 0 }, tooltip: { show: false }, silent: true
@@ -321,31 +343,45 @@
                 createPivotSeries('S5', pivotData.S5, '#009900', 'dotted', config.thickSR)
             ];
 
-            // 格式化 X 軸文字
             const formatXAxis = function(value) {
                 if (value === 'NOW') return 'NOW';
                 if (value === 'Future_1') return '未來 +1';
                 let parts = value.split('-');
                 let formattedDate = (parts.length === 3) ? parts[1] + '-' + parts[2] : (parts.length === 2 ? parts[1] : value);
-                
-                // 解決日線無縫對齊關鍵：把最後一根實體 K 棒直接加上 (NOW) 標示
-                if (isDaily && value === latestHistoryDate) {
-                    return formattedDate + '\n(NOW)';
-                }
                 return formattedDate;
             };
 
+            // 這裡也套用相同的富文本標題設定
+            const priceText = config.currentPrice !== null ? `{priceBox|現價: ${Math.round(config.currentPrice)}}` : '';
+
             const option = {
                 backgroundColor: 'transparent', 
-                title: {
-                    text: `${chartInfo.title}  (最後實體K棒：${latestHistoryDate})`, 
-                    left: 'center', top: 0, textStyle: { color: chartInfo.color, fontSize: 18, fontWeight: 'bold' }
-                },
+                title: [
+                    {
+                        text: `${chartInfo.title} (最後實體K棒：${latestHistoryDate})`,
+                        left: 'center', top: 0, textStyle: { color: chartInfo.color, fontSize: 18, fontWeight: 'bold' }
+                    },
+                    {
+                        text: priceText,
+                        right: 20, top: 0,
+                        textStyle: {
+                            rich: {
+                                priceBox: {
+                                    color: '#000000',
+                                    backgroundColor: '#00ffff',
+                                    fontSize: 16,
+                                    fontWeight: 'bold',
+                                    padding: [4, 8],
+                                    borderRadius: 4
+                                }
+                            }
+                        }
+                    }
+                ],
                 tooltip: {
                     trigger: 'axis',
                     axisPointer: { type: 'cross', crossStyle: { color: '#f1c40f', width: 1.5 }, label: { backgroundColor: '#333' } },
                     formatter: function (params) {
-                        // 在提示框中，把換行符號拿掉，讓日期與 (NOW) 顯示在同一行
                         let displayDate = formatXAxis(params[0].axisValue).replace('\n', ' ');
                         let res = `<strong>${displayDate}</strong><br/>`;
                         params.forEach(p => {
@@ -368,7 +404,6 @@
                 xAxis: {
                     type: 'category', data: categoryData, scale: true, axisLine: { lineStyle: { color: '#555' } },
                     axisLabel: { color: '#aaa', formatter: formatXAxis },
-                    // 下方時間軸游標數字
                     axisPointer: { label: { formatter: function(params) { return formatXAxis(params.value).replace('\n', ' '); } } }
                 },
                 yAxis: [
@@ -376,14 +411,12 @@
                         type: 'value', scale: true, position: 'left',
                         splitLine: { show: true, lineStyle: { color: '#2a2a2a' } }, 
                         axisLine: { lineStyle: { color: '#555' } }, 
-                        // 左側 Y 軸去小數點
                         axisLabel: { color: '#aaa', formatter: function(value) { return Math.round(value); } },
                         axisPointer: { label: { formatter: function(params) { return Math.round(params.value); } } }
                     },
                     { 
                         type: 'value', scale: true, position: 'right',
                         splitLine: { show: false }, axisLine: { show: false }, axisLabel: { show: false },
-                        // 右側游標數字標籤去小數點，放大到 22px
                         axisPointer: { 
                             label: { 
                                 show: true, 
@@ -400,7 +433,6 @@
             chartInfo.instance.setOption(option, true);
         }
 
-        // --- 三個縮放按鈕的綁定 ---
         document.getElementById('btn-show-all').addEventListener('click', function() {
             Object.values(chartsData).forEach(chartInfo => {
                 if (chartInfo.data) chartInfo.instance.dispatchAction({ type: 'dataZoom', start: 0, end: 100 });
