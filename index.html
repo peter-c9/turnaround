@@ -132,14 +132,12 @@
             'monthly': { instance: echarts.init(document.getElementById('chart-monthly'), 'dark'), data: null, title: '【月線】轉折與樞紐系統', color: '#e74c3c' }
         };
 
-        // 利用 ECharts 原生的 title 陣列與富文本 (rich text) 功能來繪製標籤
         function updateChartTitles() {
             Object.keys(chartsData).forEach(key => {
                 if (chartsData[key].data) {
                     const chartInfo = chartsData[key];
                     const latestHistoryDate = chartInfo.data.latestHistoryDate;
                     
-                    // 如果有輸入價格，使用 {priceBox|...} 語法呼叫下方定義的 rich 樣式
                     const priceText = config.currentPrice !== null 
                         ? `{priceBox|現價: ${Math.round(config.currentPrice)}}` 
                         : '';
@@ -156,14 +154,13 @@
                                 right: 20, top: 0,
                                 textStyle: {
                                     rich: {
-                                        // 這裡就是富文本的樣式，直接在 Canvas 內部渲染，絕對不會被深色模式蓋掉！
                                         priceBox: {
-                                            color: '#000000',           // 黑字
-                                            backgroundColor: '#00ffff', // 水藍底
+                                            color: '#000000',           
+                                            backgroundColor: '#00ffff', 
                                             fontSize: 16,
                                             fontWeight: 'bold',
-                                            padding: [4, 8],            // 內縮距
-                                            borderRadius: 4             // 圓角
+                                            padding: [4, 8],            
+                                            borderRadius: 4             
                                         }
                                     }
                                 }
@@ -289,7 +286,7 @@
             document.getElementById(`wrapper-${chartKey}`).style.display = 'block';
             chartsData[chartKey].instance.resize();
             drawChart(chartKey);
-            updateChartTitles(); // 加載後更新標題
+            updateChartTitles(); 
             zoomTo5(chartKey); 
         }
 
@@ -315,15 +312,12 @@
                 itemStyle: { color: color }
             });
 
+            // 乾淨的 series 陣列，只保留真正需要的圖表線條
             const seriesData = [
                 {
                     name: 'K線', type: 'candlestick', data: kLineData,
                     itemStyle: { color: '#ef232a', color0: '#14b143', borderColor: '#ef232a', borderColor0: '#14b143' },
                     markLine: { symbol: ['none', 'none'], data: currentMarkLineData, animation: false }
-                },
-                {
-                    name: 'syncRightAxis', type: 'candlestick', data: kLineData,
-                    yAxisIndex: 1, itemStyle: { opacity: 0 }, tooltip: { show: false }, silent: true
                 },
                 {
                     name: '轉折價位', type: 'line', data: turnaroundPrices, smooth: true, showSymbol: true, symbolSize: 6,
@@ -351,7 +345,6 @@
                 return formattedDate;
             };
 
-            // 這裡也套用相同的富文本標題設定
             const priceText = config.currentPrice !== null ? `{priceBox|現價: ${Math.round(config.currentPrice)}}` : '';
 
             const option = {
@@ -385,7 +378,6 @@
                         let displayDate = formatXAxis(params[0].axisValue).replace('\n', ' ');
                         let res = `<strong>${displayDate}</strong><br/>`;
                         params.forEach(p => {
-                            if (p.seriesName === 'syncRightAxis') return; 
                             if (p.value !== null && p.value !== undefined && !isNaN(p.value) && p.seriesName !== 'K線') {
                                 res += `${p.marker} ${p.seriesName}: <b style="font-size: 14px;">${Math.round(p.value)}</b><br/>`;
                             } else if (p.seriesName === 'K線' && p.value && p.value.length >= 5) {
@@ -413,19 +405,8 @@
                         axisLine: { lineStyle: { color: '#555' } }, 
                         axisLabel: { color: '#aaa', formatter: function(value) { return Math.round(value); } },
                         axisPointer: { label: { formatter: function(params) { return Math.round(params.value); } } }
-                    },
-                    { 
-                        type: 'value', scale: true, position: 'right',
-                        splitLine: { show: false }, axisLine: { show: false }, axisLabel: { show: false },
-                        axisPointer: { 
-                            label: { 
-                                show: true, 
-                                formatter: function(params) { return Math.round(params.value); },
-                                backgroundColor: '#e67e22', color: '#ffffff', fontWeight: 'bold', padding: [6, 12],
-                                fontSize: 22 
-                            } 
-                        }
                     }
+                    // 完全刪除右邊那組 Y 軸，徹底根除不同步的問題
                 ],
                 dataZoom: [{ type: 'inside', start: 0, end: 100 }, { show: true, type: 'slider', bottom: '2%', height: 20, borderColor: '#333' }],
                 series: seriesData
